@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Title</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <!-- Bootstrap CSS v5.2.1 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous" />
+    <script src=""></script>
+</head>
+
+<body>
+    <main>
+        <div id="about" class="container mt-5">
+            <div class="card mb-3">
+                <div class="card-body d-flex justify-content-center">
+                    <form id="myForm">
+                        <div class="mb-3">
+                            <label class="form-label">Merchant</label>
+                            <input type="text" class="form-control" id="merchant">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Name</label>
+                            <input type="text" class="form-control" id="name">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Phone Number</label>
+                            <input type="text" class="form-control" id="phn">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Amount</label>
+                            <input type="number" class="form-control" id="amnt">
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="submit">Submit</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bootstrap JavaScript Libraries -->
+
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
+        integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r"
+        crossorigin="anonymous"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"
+        integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+"
+        crossorigin="anonymous"></script>
+    <!-- Firebase SDK -->
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+        import { getDatabase, ref, set, get, child,push } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAj9VyY0uGKbH_04fjb3pABCMqmdoxKSnQ",
+            authDomain: "rewards-db403.firebaseapp.com",
+            databaseURL: "https://rewards-db403-default-rtdb.firebaseio.com",
+            projectId: "rewards-db403",
+            storageBucket: "rewards-db403.appspot.com",
+            messagingSenderId: "320351030437",
+            appId: "1:320351030437:web:9e4365768c537c8f7c914c",
+            measurementId: "G-EKCE93WLDP"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        const form = document.getElementById('myForm');
+        form.addEventListener('submit', function (e) {
+            e.preventDefault(); // Prevent form submission
+
+            // Get form values
+            const merchant = document.getElementById('merchant').value;
+            const name = document.getElementById('name').value;
+            const phone = document.getElementById('phn').value;
+            const amount = parseInt(document.getElementById('amnt').value);
+
+            // Set data in Firebase
+            const TransactionRef =push(ref(database, 'CBS/' + merchant));
+            set(TransactionRef, {
+                Merchant: merchant,
+                Name: name,
+                Phone: phone,
+                Amount: amount
+            }).then(() => {
+                form.reset(); // Reset the form after successful submission
+                      sendSMS(name, phone);
+            }).catch((error) => {
+                console.error('Error uploading data:', error);
+                alert('Error uploading data: ' + error.message);
+            });
+            sendSMS(name,phone);
+                   //reward system
+            const rewardRef = ref(database, 'rewardSystem/' + phone);
+            get(child(rewardRef, 'TotalAmount')).then((snapshot) => {
+                let currentTotal = snapshot.val() || 0;
+                currentTotal += amount;
+                // Update TotalAmount in reward system
+                set(rewardRef, {
+                    TotalAmount: currentTotal,
+                    Name: name
+                }).then(() => {
+                    console.log('Reward system updated successfully');
+                    alert('Reward system updated successfully');
+                }).catch((error) => {
+                    console.error('Error updating reward system:', error);
+                    alert('Error updating reward system: ' + error.message);
+                });
+            }).catch((error) => {
+                console.error('Error fetching TotalAmount:', error);
+                alert('Error fetching TotalAmount: ' + error.message);
+            });
+        });
+
+ // Function to send SMS using Infobip SMS API
+ function sendSMS(name, phone) {
+            const myHeaders = new Headers();
+            myHeaders.append("Authorization", "App 988a35aa9601ccee717e273c6a571298-267c8be8-3f49-469e-9e15-b34ea0f53a01");
+            myHeaders.append("Content-Type", "application/json");
+            myHeaders.append("Accept", "application/json");
+
+            const raw = JSON.stringify({
+                "messages": [
+                    {
+                        "destinations": [{"to": '254'+phone}],
+                        "from": "CreditBank",
+                        "text":  `Hi ${name}, thanks for using Credit Bank. For you to win rewards from us, pay more using Credit Bank. Regards, Credit Bank.`
+                    }
+                ]
+            });
+
+            const requestOptions = {
+                method: "POST",
+                headers: myHeaders,
+                body: raw,
+                redirect: "follow"
+            };
+
+            fetch("https://1vkrqk.api.infobip.com/sms/2/text/advanced", requestOptions)
+                .then(response => response.text())
+                .then(result => console.log(result))
+                .catch(error => console.error('Error sending SMS:', error));
+        }
+
+    </script>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
