@@ -14,25 +14,26 @@
 
 <body>
     <main>
-        <div id="about" class="container mt-5">
+        <div class="container mt-5">
             <div class="card mb-3">
                 <div class="card-body d-flex justify-content-center">
                     <form id="myForm">
                         <div class="mb-3">
                             <label class="form-label">Merchant</label>
-                            <input type="text" class="form-control" id="merchant">
+                            <input type="text" class="form-control" id="merchant"
+                                placeholder="Merchant Name..eg(school,supermarket)" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Name</label>
-                            <input type="text" class="form-control" id="name">
+                            <input type="text" class="form-control" id="name" placeholder="Name" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Phone Number</label>
-                            <input type="text" class="form-control" id="phn">
+                            <input type="text" class="form-control" id="phn" placeholder="phone Number" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Amount</label>
-                            <input type="number" class="form-control" id="amnt">
+                            <input type="number" class="form-control" id="amnt" placeholder="Enter Amount" required>
                         </div>
                         <button type="submit" class="btn btn-primary" id="submit">Submit</button>
                     </form>
@@ -54,7 +55,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-        import { getDatabase, ref, set, get, child,push } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
+        import { getDatabase, ref, set, get, child, push } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
 
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -74,8 +75,7 @@
 
         const form = document.getElementById('myForm');
         form.addEventListener('submit', function (e) {
-            e.preventDefault(); // Prevent form submission
-
+            e.preventDefault();
             // Get form values
             const merchant = document.getElementById('merchant').value;
             const name = document.getElementById('name').value;
@@ -83,7 +83,7 @@
             const amount = parseInt(document.getElementById('amnt').value);
 
             // Set data in Firebase
-            const TransactionRef =push(ref(database, 'CBS/' + merchant));
+            const TransactionRef = push(ref(database, 'CBS/' + merchant));
             set(TransactionRef, {
                 Merchant: merchant,
                 Name: name,
@@ -91,21 +91,24 @@
                 Amount: amount
             }).then(() => {
                 form.reset(); // Reset the form after successful submission
-                      sendSMS(name, phone);
+                sendSMS(name, phone, amount);
             }).catch((error) => {
                 console.error('Error uploading data:', error);
                 alert('Error uploading data: ' + error.message);
             });
-            sendSMS(name,phone);
-                   //reward system
+
+            //reward system
             const rewardRef = ref(database, 'rewardSystem/' + phone);
             get(child(rewardRef, 'TotalAmount')).then((snapshot) => {
                 let currentTotal = snapshot.val() || 0;
                 currentTotal += amount;
+                const rewardAmount = (amount * 0.1).toFixed(2);
+                currentTotal -= rewardAmount;
                 // Update TotalAmount in reward system
                 set(rewardRef, {
                     TotalAmount: currentTotal,
-                    Name: name
+                    Name: name,
+                    RewardAmount: rewardAmount
                 }).then(() => {
                     console.log('Reward system updated successfully');
                     alert('Reward system updated successfully');
@@ -119,8 +122,24 @@
             });
         });
 
- // Function to send SMS using Infobip SMS API
- function sendSMS(name, phone) {
+        // Function to send SMS using Infobip SMS API
+        function sendSMS(name, phone, amount) {
+            const currentTime = new Date();
+            const hour = currentTime.getHours();
+            let greeting = '';
+            if (hour >= 6 && hour < 12) {
+                greeting = 'Good morning';
+            } else if (hour >= 12 && hour < 16) {
+                greeting = 'Good afternoon';
+            } else {
+                greeting = 'Good evening';
+            }
+            let message = '';
+            if (amount <= 50000) {
+                message = `Hi ${greeting}, ${name}, thanks for using Credit Bank. For you to win rewards from us, transact more through Credit Bank. Regards, Credit Bank.`;
+            } else {
+                message = `Hi ${greeting}, ${name}, thanks for using Credit Bank. For you to win rewards from us, transact more through Credit Bank. Regards, Credit Bank. Eligible to win rewards for transacting over Ksh 50,000.`;
+            }
             const myHeaders = new Headers();
             myHeaders.append("Authorization", "App 988a35aa9601ccee717e273c6a571298-267c8be8-3f49-469e-9e15-b34ea0f53a01");
             myHeaders.append("Content-Type", "application/json");
@@ -129,9 +148,9 @@
             const raw = JSON.stringify({
                 "messages": [
                     {
-                        "destinations": [{"to": '254'+phone}],
+                        "destinations": [{ "to": '254' + phone }],
                         "from": "CreditBank",
-                        "text":  `Hi ${name}, thanks for using Credit Bank. For you to win rewards from us, pay more using Credit Bank. Regards, Credit Bank.`
+                        "text": message
                     }
                 ]
             });
@@ -150,8 +169,6 @@
         }
 
     </script>
-
-    <script src="script.js"></script>
 </body>
 
 </html>
