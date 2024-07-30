@@ -100,14 +100,14 @@
             //reward system
             const rewardRef = ref(database, 'rewardSystem/' + phone);
             get(child(rewardRef, 'TotalAmount')).then((snapshot) => {
-                let currentTotal = snapshot.val() || 0;
+                let currentTotal = 0;
                 currentTotal += amount;
                 const rewardAmount = (amount * 0.1).toFixed(2);
-                currentTotal -= rewardAmount;
-                // Update TotalAmount in reward system
+                              // Update TotalAmount in reward system
                 set(rewardRef, {
                     TotalAmount: currentTotal,
                     Name: name,
+                    Merchant:merchant,
                     RewardAmount: rewardAmount
                 }).then(() => {
                     console.log('Reward system updated successfully');
